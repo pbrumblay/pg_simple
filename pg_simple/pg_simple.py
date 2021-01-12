@@ -4,7 +4,6 @@ __author__ = 'Masroor Ehsan'
 import time
 from collections import namedtuple
 import logging
-import os
 
 from psycopg2.extras import DictCursor, NamedTupleCursor
 
@@ -12,14 +11,11 @@ from psycopg2.extras import DictCursor, NamedTupleCursor
 class PgSimple(object):
     _connection = None
     _cursor = None
-    _log = None
-    _log_fmt = None
     _cursor_factory = None
     _pool = None
+    _log = logging.getLogger(__name__)
 
-    def __init__(self, pool, log=None, log_fmt=None, nt_cursor=True):
-        self._log = log
-        self._log_fmt = log_fmt
+    def __init__(self, pool, nt_cursor=True):
         self._cursor_factory = NamedTupleCursor if nt_cursor else DictCursor
         self._pool = pool
         self._connect()
@@ -30,37 +26,12 @@ class PgSimple(object):
             self._connection = self._pool.get_conn()
             self._cursor = self._connection.cursor(cursor_factory=self._cursor_factory)
         except Exception as e:
-            self._log_error('postgresql connection failed: ' + e.message)
+            self._log.error('postgresql connection failed: %s', e)
             raise
 
     def _debug_write(self, msg):
-        if msg and self._log:
-            if isinstance(self._log, logging.Logger):
-                self._log.debug(msg)
-            else:
-                self._log.write(msg + os.linesep)
-
-    def _log_cursor(self, cursor):
-        if not self._log:
-            return
-
-        if self._log_fmt:
-            msg = self._log_fmt(cursor)
-        else:
-            msg = str(cursor.query)
-
-        self._debug_write(msg)
-
-    def _log_error(self, data):
-        if not self._log:
-            return
-
-        if self._log_fmt:
-            msg = self._log_fmt(data)
-        else:
-            msg = str(data)
-
-        self._debug_write(msg)
+        if msg:
+            self._log.debug(msg)
 
     def fetchone(self, table, fields='*', where=None, order=None, offset=None):
         """Get a single result
@@ -135,14 +106,15 @@ class PgSimple(object):
     def execute(self, sql, params=None):
         """Executes a raw query"""
         try:
-            if self._log and self._log_fmt:
-                self._cursor.timestamp = time.time()
+            self._cursor.timestamp = time.time()
+            self._log.debug('Executing Statement')
+            self._log.debug('===================')
+            self._log.debug(sql)
+            self._log.debug('Parameters: %s', params)
+            self._log.debug('===================')
             self._cursor.execute(sql, params)
-            if self._log and self._log_fmt:
-                self._log_cursor(self._cursor)
         except Exception as e:
-            if self._log and self._log_fmt:
-                self._log_error('execute() failed: ' + e.message)
+            self._log.error('execute() failed: %s', e)
             raise
 
         return self._cursor
@@ -256,10 +228,10 @@ class PgSimple(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         if not isinstance(exc_value, Exception):
-            self._debug_write('Committing transaction')
+            self._log.debug('Committing transaction')
             self.commit()
         else:
-            self._debug_write('Rolling back transaction')
+            self._log.debug('Rolling back transaction')
             self.rollback()
 
         self._cursor.close()
