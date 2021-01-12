@@ -109,8 +109,8 @@ class PgSimple(object):
             self._cursor.timestamp = time.time()
             self._log.debug('Executing Statement')
             self._log.debug('===================')
-            self._log.debug(sql)
-            self._log.debug('Parameters: %s', params)
+            self._log.debug(sql) # this could be considered a security problem. BEWARE!
+            self._log.debug('Parameters: %s', params) # this could be considered a security problem. BEWARE!
             self._log.debug('===================')
             self._cursor.execute(sql, params)
         except Exception as e:
