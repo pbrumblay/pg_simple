@@ -5,8 +5,9 @@ import time
 from collections import namedtuple
 import logging
 
-from psycopg2.extras import DictCursor, NamedTupleCursor
+from psycopg2.extras import DictCursor, NamedTupleCursor, register_uuid
 
+register_uuid()
 
 class PgSimple(object):
     _connection = None
