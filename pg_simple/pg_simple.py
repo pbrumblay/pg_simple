@@ -5,7 +5,7 @@ import time
 from collections import namedtuple
 import logging
 
-from psycopg2.extras import DictCursor, NamedTupleCursor, register_uuid
+from psycopg2.extras import RealDictCursor, DictCursor, NamedTupleCursor, register_uuid
 
 register_uuid()
 
@@ -16,8 +16,14 @@ class PgSimple(object):
     _pool = None
     _log = logging.getLogger(__name__)
 
-    def __init__(self, pool, nt_cursor=True):
-        self._cursor_factory = NamedTupleCursor if nt_cursor else DictCursor
+    def __init__(self, pool, cursor_type='nt'):
+        if cursor_type == 'realdict':
+            self._cursor_factory = RealDictCursor
+        elif cursor_type == 'dict':
+            self._cursor_factory = DictCursor
+        else:
+            self._cursor_factory = NamedTupleCursor
+
         self._pool = pool
         self._connect()
 
